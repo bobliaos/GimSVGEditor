@@ -9,6 +9,7 @@
 			import com.SVGParser;
 			
 			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
 			import mx.events.FlexEvent;
 			
 			[Bindable] private var polygonsOfFloor:ArrayCollection;
@@ -16,9 +17,13 @@
 			
 			protected function onCreated(event:FlexEvent):void
 			{
-				canvas.graphics.beginFill(0xFF0033,1);
-				canvas.graphics.drawCircle(canvas.parent.width * 0.5,canvas.parent.height * 0.5,120);
-				canvas.graphics.endFill();
+				var size:Number = 60;
+				for(var i:int = 0;i < 96;i ++)
+				{
+					canvas.graphics.beginFill(Math.random() * 0xFFFFFF,Math.random());
+					canvas.graphics.drawCircle(canvas.parent.width * Math.random(),canvas.parent.height * Math.random(),size * Math.random());
+					canvas.graphics.endFill();
+				}
 			}
 			
 			protected function onLoadBtnClick(event:MouseEvent):void
@@ -27,11 +32,13 @@
 				file.browseForOpen("打开SVG文件");
 				file.addEventListener(Event.SELECT,function(e:Event):void{
 					var fs:FileStream = new FileStream();
-					fs.open(file,FileMode.READ);
+					fs.open(file,FileMode.UPDATE);
 					var SVGString:String = fs.readUTFBytes(fs.bytesAvailable);
-					trace(SVGString);
-					
-					var polygons:Array = SVGParser.parse(SVGString);
+					var allPathXMLString:String = SVGParser.coverToAllPath(SVGString);
+					fs.writeUTF("\n\n<!-- all path node -->\n");
+					fs.writeUTF(allPathXMLString);
+					fs.close();
+					Alert.show("结点转换成功!");
 					floors = new ArrayCollection(["floor_1","floor_2","floor_3"]);
 				});
 			}
@@ -51,7 +58,7 @@
 			</s:VGroup>
 		</s:BorderContainer>
 		<s:BorderContainer height="100%">
-			<s:VGroup width="200" chromeColor="0xFF0033">
+			<s:VGroup width="700" chromeColor="0xFF0033">
 				<s:Label text="字段设置"/>
 				<s:HGroup width="100%">
 					<s:Label width="60" text="字段名称"/>
@@ -68,7 +75,7 @@
 			</s:VGroup>
 		</s:BorderContainer>
 		<s:BorderContainer width="100%" height="100%">
-			<s:Group id="canvas">
+			<s:Group id="canvas" width="100%" height="100%" clipAndEnableScrolling="true">
 			</s:Group>
 		</s:BorderContainer>
 	</s:HGroup>
