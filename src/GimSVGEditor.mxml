@@ -12,8 +12,11 @@
 			import mx.controls.Alert;
 			import mx.events.FlexEvent;
 			
-			[Bindable] private var polygonsOfFloor:ArrayCollection;
-			[Bindable] private var floors:ArrayCollection;
+			import spark.events.IndexChangeEvent;
+			import spark.events.TextOperationEvent;
+			
+			[Bindable] private var floors:ArrayCollection = new ArrayCollection();
+			private var floorPolygonIds:Array = [];
 			
 			protected function onCreated(event:FlexEvent):void
 			{
@@ -26,6 +29,7 @@
 				}
 			}
 			
+			private var allPathXML:XML;
 			protected function onLoadBtnClick(event:MouseEvent):void
 			{
 				var file:File = new File();
@@ -33,14 +37,102 @@
 				file.addEventListener(Event.SELECT,function(e:Event):void{
 					var fs:FileStream = new FileStream();
 					fs.open(file,FileMode.UPDATE);
-					var SVGString:String = fs.readUTFBytes(fs.bytesAvailable);
-					var allPathXMLString:String = SVGParser.coverToAllPath(SVGString);
-					fs.writeUTF("\n\n<!-- all path node -->\n");
-					fs.writeUTF(allPathXMLString);
+					var origSVGString:String = fs.readUTFBytes(fs.bytesAvailable);
 					fs.close();
-					Alert.show("结点转换成功!");
-					floors = new ArrayCollection(["floor_1","floor_2","floor_3"]);
+					
+					allPathXML = SVGParser.coverToAllPath(origSVGString);
+					var floorIdStrings:Array = [];
+					for each(var floorXML:XML in allPathXML.children())
+					{
+						var floorId:String = floorXML.@id.toString();
+						floorIdStrings.push(floorId);
+						floorPolygonIds[floorId] = [];
+						for each(var polygonXML:XML in floorXML.children())
+						{
+							floorPolygonIds[floorId].push(polygonXML.@nodeId.toString());
+						}
+					}
+					floors.source = floorIdStrings;
 				});
+			}
+			
+			private var curSelectedFloorId:String;
+			protected function onFloorDropDownListChange(event:IndexChangeEvent):void
+			{
+				curSelectedFloorId = floors.source[event.newIndex];
+				if(curSelectedFloorId != "")
+					floorPolygonIdsList.dataProvider = new ArrayCollection(floorPolygonIds[curSelectedFloorId]);
+			}
+			
+			protected function onFloorPolygonIdsListChange(event:IndexChangeEvent):void
+			{
+				var polygonId:String = floorPolygonIds[curSelectedFloorId][event.newIndex];
+				if(curSelectedFloorId != "")
+				{
+					curEditingXMLNode = allPathXML.children().(@id == curSelectedFloorId).children().(@nodeId == polygonId)[0];
+					updateAttributes();
+				}
+			}
+			
+			private var curEditingXMLNode:XML;
+			
+			protected function onSaveBtnClick(event:MouseEvent):void
+			{
+				if(allPathXML)
+				{
+					var fileR:FileReference = new FileReference();
+					var saveString:String = "<?xml version='1.0' encoding='utf-8'?>\n" +
+					"<!-- Generator: GimSVGEditor 1.0.1 -->\n" +
+					"<!DOCTYPE svg PUBLIC '-//W3C//DTD SVG 1.1//EN' 'http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd'>\n" +
+					allPathXML.toXMLString();
+					fileR.save(saveString,"data.sgxml");
+				}
+				else
+				{
+					Alert.show("你需要先加载一个SVG文件");
+				}
+			}
+			
+			private function updateAttributes():void
+			{
+				//<path nodeId="node_2014_8_4_05:31:40_6447" placeTypeId="-1" bindNodeIds="" nodePosition="0,0" fill="#920783" deep="1" d="M567,489 L832,489 L832,538 L567,538Z"/>
+				nodeId = curEditingXMLNode.@nodeId;
+				placeTypeId = curEditingXMLNode.@placeTypeId;
+				bindNodeIds = curEditingXMLNode.@bindNodeIds;
+				nodePosition = curEditingXMLNode.@nodePosition;
+				fill = curEditingXMLNode.@fill;
+				deep = curEditingXMLNode.@deep;
+				d = curEditingXMLNode.@d;
+			}
+			
+			[Bindable] private var nodeId:String = "";
+			[Bindable] private var placeTypeId:String = "";
+			[Bindable] private var bindNodeIds:String = "";
+			[Bindable] private var nodePosition:String = "";
+			[Bindable] private var fill:String = "";
+			[Bindable] private var deep:String = "";
+			[Bindable] private var d:String = "";
+			
+			protected function onInputChangee(event:TextOperationEvent):void
+			{
+				trace(placeTypeId);
+				curEditingXMLNode.@placeTypeId = placeTypeId;
+				
+				nodeId = nodeIdInput.text;
+				placeTypeId = placeTypeIdInput.text;
+				bindNodeIds = bindNodeIdsInput.text;
+				nodePosition = nodePositionInput.text;
+				fill = fillInput.text;
+				deep = deepInput.text;
+				d = dInput.text;
+				
+				curEditingXMLNode.@nodeId = nodeId;
+				curEditingXMLNode.@placeTypeId = placeTypeId;
+				curEditingXMLNode.@bindNodeIds = bindNodeIds;
+				curEditingXMLNode.@nodePosition = nodePosition;
+				curEditingXMLNode.@fill = fill;
+				curEditingXMLNode.@deep = deep;
+				curEditingXMLNode.@d = d;
 			}
 			
 		]]>
@@ -49,29 +141,25 @@
 		<!-- Place non-visual elements (e.g., services, value objects) here -->
 	</fx:Declarations>
 	<s:HGroup width="100%" height="100%" gap="0">
-		<s:BorderContainer height="100%">
-			<s:VGroup width="200" height="100%" gap="0">
-				<s:Label text="载入与选择"/>
+		<s:BorderContainer height="100%" width="240">
+			<s:VGroup left="2" right="2" top="2" bottom="2" gap="0">
+				<!--<s:Label text="载入与选择"/>-->
 				<s:Button width="100%" label="载入SVG" click="onLoadBtnClick(event)"/>
-				<s:DropDownList width="100%" dataProvider="{floors}"/>
-				<s:List width="100%" height="100%" dataProvider="{polygonsOfFloor}"/>
+				<s:DropDownList width="100%" dataProvider="{floors}" change="onFloorDropDownListChange(event)"/>
+				<s:List id="floorPolygonIdsList" width="100%" height="100%" change="onFloorPolygonIdsListChange(event)"/>
+				<s:Button width="100%" label="保存SVG" click="onSaveBtnClick(event)"/>
 			</s:VGroup>
 		</s:BorderContainer>
-		<s:BorderContainer height="100%">
-			<s:VGroup width="700" chromeColor="0xFF0033">
-				<s:Label text="字段设置"/>
-				<s:HGroup width="100%">
-					<s:Label width="60" text="字段名称"/>
-					<s:TextInput width="100%" text="值"/>
-				</s:HGroup>
-				<s:HGroup width="100%">
-					<s:Label width="60" text="字段名称"/>
-					<s:TextInput width="100%" text="值"/>
-				</s:HGroup>
-				<s:HGroup width="100%">
-					<s:Label width="60" text="字段名称"/>
-					<s:TextInput width="100%" text="值"/>
-				</s:HGroup>
+		<s:BorderContainer height="100%" width="360">
+			<s:VGroup left="2" right="2" top="2" bottom="2" gap="0">
+				<!--<s:Label text="字段设置"/>-->
+				<s:HGroup width="100%"><s:Label width="60" text="ID"/><s:TextInput id="nodeIdInput" width="100%" text="{nodeId}" editable="false"/></s:HGroup>
+				<s:HGroup width="100%"><s:Label width="60" text="类型"/><s:TextInput id="placeTypeIdInput" width="100%" text="{placeTypeId}" change="onInputChangee(event)"/></s:HGroup>
+				<s:HGroup width="100%"><s:Label width="60" text="绑定"/><s:TextInput id="bindNodeIdsInput" width="100%" text="{bindNodeIds}"/></s:HGroup>
+				<s:HGroup width="100%"><s:Label width="60" text="位置"/><s:TextInput id="nodePositionInput" width="100%" text="{nodePosition}"/></s:HGroup>
+				<s:HGroup width="100%"><s:Label width="60" text="填充"/><s:TextInput id="fillInput" width="100%" text="{fill}"/></s:HGroup>
+				<s:HGroup width="100%"><s:Label width="60" text="深度"/><s:TextInput id="deepInput" width="100%" text="{deep}"/></s:HGroup>
+				<s:HGroup width="100%"><s:Label width="60" text="数据"/><s:TextInput id="dInput" width="100%" text="{d}"/></s:HGroup>
 			</s:VGroup>
 		</s:BorderContainer>
 		<s:BorderContainer width="100%" height="100%">
