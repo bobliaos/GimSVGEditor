@@ -3,7 +3,7 @@
 <!DOCTYPE svg PUBLIC '-//W3C//DTD SVG 1.1//EN' 'http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd'>
 <svg version="1.1" id="图层_1" x="0px" y="0px" width="1028px" height="680px" viewBox="0 0 1028 680" enable-background="new 0 0 1028 680" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
   <g id="floor_1">
-    <path nodeId="node_2014_8_5_02:29:08_3590" placeTypeId="-1" bindNodeIds="" nodePosition="533.52,345.21" fill="#C9CACA" deep="5" d="M169.83,20.755 L944.271,35.325 L990.223,562.08 L120.517,669.673 L87.653,641.654 L76.808,482.507 L137.329,39.809Z"/>
+    <path nodeId="node_2014_8_5_02:29:08_3590" placeTypeId="-1" bindNodeIds="" nodePosition="533.52,345.21" fill="#C9CACA" deep="50" d="M169.83,20.755 L944.271,35.325 L990.223,562.08 L120.517,669.673 L87.653,641.654 L76.808,482.507 L137.329,39.809Z"/>
     <path nodeId="node_2014_8_5_02:29:08_3372" placeTypeId="-1" bindNodeIds="" nodePosition="234.20,78.44" fill="#E47AAD" deep="50" d="M190.939,137.228 L223.477,115.042 L297.428,115.042 L297.428,97.294 L341.059,97.294 L341.059,24.083 L171.711,19.646 L137.694,38.874 L127.341,114.303 L175.409,117.261Z"/>
     <path nodeId="node_2014_8_5_02:29:08_804" placeTypeId="-1" bindNodeIds="" nodePosition="424.62,113.19" fill="#F2DE89" deep="50" d="M361.765,118 L406.875,119.479 L403.177,199.346 L486.742,203.044 L487.481,26.302 L363.983,23.344Z"/>
     <path nodeId="node_2014_8_5_02:29:08_7790" placeTypeId="-1" bindNodeIds="" nodePosition="370.64,171.98" fill="#F2DE89" deep="50" d="M337.361,144.623 L404.656,146.102 L403.177,199.346 L336.622,198.607Z"/>
