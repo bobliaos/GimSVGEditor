@@ -6,10 +6,10 @@ package com
 	{
 		private static var svgXML:XML;
 		
-		private static const PATH_MODE_XML_STRING:String = "<path nodeId='' placeTypeId='' bindNodeIds='' nodePosition='' fill='' deep='' d=''/>";
-		private static const DEFAULT_PLACE_TYPE:String = "-1";
+		private static const PATH_MODE_XML_STRING:String = "<path nodeId='' nodeTypeId='' bindNodeIds='' nodePosition='' fill='' deep='' d=''/>";
+		private static const DEFAULT_NODE_TYPE_ID:String = "-1";
 		private static const DEFAULT_FILL:String = "#FFFFFF";
-		private static const DEFAULT_DEEP:String = "50";
+		private static const DEFAULT_DEEP:String = "30";
 		private static const DEFAULT_D:String = "";
 		
 		public function SVGParser()
@@ -66,7 +66,7 @@ package com
 					break;
 			}
 			simpleXML.@nodeId = xml.@nodeId.toString() != "" ? xml.@nodeId : generateNodeId();
-			simpleXML.@placeTypeId = xml.@placeTypeId.toString() != "" ? xml.@placeTypeId : DEFAULT_PLACE_TYPE;
+			simpleXML.@nodeTypeId = xml.@nodeTypeId.toString() != "" ? xml.@nodeTypeId : DEFAULT_NODE_TYPE_ID;
 			simpleXML.@bindNodeIds = xml.@bindNodeIds.toString() != "" ? xml.@bindNodeIds : "";
 			simpleXML.@fill = xml.@fill.toString() != "" ? xml.@fill : DEFAULT_FILL;
 			simpleXML.@deep = xml.@deep.toString() != "" ? xml.@deep : DEFAULT_DEEP;

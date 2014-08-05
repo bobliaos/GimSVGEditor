@@ -20,7 +20,7 @@
 			
 			[Bindable] private var floors:ArrayCollection = new ArrayCollection();
 			[Bindable] private var nodeId:String = "";
-			[Bindable] private var placeTypeId:String = "";
+			[Bindable] private var nodeTypeId:String = "";
 			[Bindable] private var bindNodeIds:String = "";
 			[Bindable] private var nodePosition:String = "";
 			[Bindable] private var fill:String = "";
@@ -110,7 +110,7 @@
 			private function updateAttributes():void
 			{
 				nodeId = curEditingXMLNode.@nodeId;
-				placeTypeId = curEditingXMLNode.@placeTypeId;
+				nodeTypeId = curEditingXMLNode.@nodeTypeId;
 				bindNodeIds = curEditingXMLNode.@bindNodeIds;
 				nodePosition = curEditingXMLNode.@nodePosition;
 				fill = curEditingXMLNode.@fill;
@@ -121,7 +121,7 @@
 			protected function onInputChangee(event:TextOperationEvent):void
 			{
 				curEditingXMLNode.@nodeId = nodeId = nodeIdInput.text;
-				curEditingXMLNode.@placeTypeId = placeTypeId = placeTypeIdInput.text;
+				curEditingXMLNode.@nodeTypeId = nodeTypeId = nodeTypeIdInput.text;
 				curEditingXMLNode.@bindNodeIds = bindNodeIds = bindNodeIdsInput.text;
 				curEditingXMLNode.@nodePosition = nodePosition = nodePositionInput.text;
 				curEditingXMLNode.@fill = fill = fillInput.text;
@@ -148,7 +148,7 @@
 			<s:VGroup left="2" right="2" top="2" bottom="2" gap="0">
 				<!--<s:Label text="字段设置"/>-->
 				<s:HGroup width="100%"><s:Label width="60" text="ID"/><s:TextInput id="nodeIdInput" change="onInputChangee(event)" width="100%" text="{nodeId}" editable="false"/></s:HGroup>
-				<s:HGroup width="100%"><s:Label width="60" text="类型"/><s:TextInput id="placeTypeIdInput" change="onInputChangee(event)" width="100%" text="{placeTypeId}"/></s:HGroup>
+				<s:HGroup width="100%"><s:Label width="60" text="类型"/><s:TextInput id="nodeTypeIdInput" change="onInputChangee(event)" width="100%" text="{nodeTypeId}"/></s:HGroup>
 				<s:HGroup width="100%"><s:Label width="60" text="绑定"/><s:TextInput id="bindNodeIdsInput" change="onInputChangee(event)" width="100%" text="{bindNodeIds}"/></s:HGroup>
 				<s:HGroup width="100%"><s:Label width="60" text="位置"/><s:TextInput id="nodePositionInput" change="onInputChangee(event)" width="100%" text="{nodePosition}"/></s:HGroup>
 				<s:HGroup width="100%"><s:Label width="60" text="填充"/><s:TextInput id="fillInput" change="onInputChangee(event)" width="100%" text="{fill}"/></s:HGroup>
