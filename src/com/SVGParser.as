@@ -6,7 +6,7 @@ package com
 	{
 		private static var svgXML:XML;
 		
-		private static const PATH_MODE_XML_STRING:String = "<path nodeId='' nodeTypeId='' bindNodeIds='' nodePosition='' fill='' deep='' d=''/>";
+		private static const PATH_MODE_XML_STRING:String = "<path nodeId='' nodeTypeId='' bindNodeIds='' nodePosition='' bindShopId='' fill='' deep='' d=''/>";
 		private static const DEFAULT_NODE_TYPE_ID:String = "-1";
 		private static const DEFAULT_FILL:String = "#FFFFFF";
 		private static const DEFAULT_DEEP:String = "30";
@@ -68,10 +68,10 @@ package com
 			simpleXML.@nodeId = xml.@nodeId.toString() != "" ? xml.@nodeId : generateNodeId();
 			simpleXML.@nodeTypeId = xml.@nodeTypeId.toString() != "" ? xml.@nodeTypeId : DEFAULT_NODE_TYPE_ID;
 			simpleXML.@bindNodeIds = xml.@bindNodeIds.toString() != "" ? xml.@bindNodeIds : "";
+			simpleXML.@bindShopId = xml.@bindShopId.toString() != "" ? xml.@bindShopId : "";
 			simpleXML.@fill = xml.@fill.toString() != "" ? xml.@fill : DEFAULT_FILL;
 			simpleXML.@deep = xml.@deep.toString() != "" ? xml.@deep : DEFAULT_DEEP;
 			simpleXML.@d = xml.@d.toString() != "" ? xml.@d : DEFAULT_D;
-			trace(calculateNodePosition(simpleXML.@d));
 			simpleXML.@nodePosition = xml.@nodePosition.toString() != "" ? xml.@nodePosition : calculateNodePosition(simpleXML.@d);
 			return simpleXML;
 		}
@@ -308,6 +308,12 @@ package com
 			var svgXML:XML = XML(SVGString);
 //			svgXML.normalize();
 			return svgXML;
+		}
+		
+		public static function generateNodeXML(localX:Number, localY:Number):XML
+		{
+			var xmlString:String = "<path nodeTypeId=\"0\" nodePosition=\"" + localX + "," + localY + "\" d=\"M" + localX + "," + localY + "Z\"/>";
+			return formatSimpleXML(new XML(xmlString));
 		}
 	}
 }

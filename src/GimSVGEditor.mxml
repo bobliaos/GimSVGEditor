@@ -2,42 +2,38 @@
 <s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009"
 					   xmlns:s="library://ns.adobe.com/flex/spark"
 					   xmlns:mx="library://ns.adobe.com/flex/mx"
-					   width="1650" height="700" creationComplete="onCreated(event)"
+					   width="1650" height="700" addedToStage="addToStage(event)"
 					   fontFamily="Microsoft Yahei" showStatusBar="false">
 	<fx:Script>
 		<![CDATA[
 			import com.SVGParser;
 			import com.lorentz.SVG.display.SVGDocument;
-			import com.lorentz.SVG.events.SVGEvent;
 			import com.lorentz.processing.ProcessExecutor;
 			
 			import mx.collections.ArrayCollection;
 			import mx.controls.Alert;
-			import mx.events.FlexEvent;
 			
 			import spark.events.IndexChangeEvent;
 			import spark.events.TextOperationEvent;
 			
-			[Bindable] private var floors:ArrayCollection = new ArrayCollection();
-			[Bindable] private var nodeId:String = "";
-			[Bindable] private var nodeTypeId:String = "";
-			[Bindable] private var bindNodeIds:String = "";
-			[Bindable] private var nodePosition:String = "";
-			[Bindable] private var fill:String = "";
-			[Bindable] private var deep:String = "";
-			[Bindable] private var d:String = "";
+			private var svg:SVGDocument;
 			
-			private var floorPolygonIds:Array = [];
-			private var allPathXML:XML;
+			private var origXML:XML;
 			private var curSelectedFloorId:String;
-			private var curEditingXMLNode:XML;
+			private var curSelectedNodeId:String;
+			private var curEditingNodeXML:XML;
 			
-			
-			protected function onCreated(event:FlexEvent):void
+			protected function addToStage(event:Event):void
 			{
+				nodesContainer.graphics.beginFill(0xFF0033,0);
+				nodesContainer.graphics.drawRect(0,0,nodesContainer.width,nodesContainer.height);
+				nodesContainer.graphics.endFill();
+				
+				ProcessExecutor.instance.initialize(stage);
+				svg = new SVGDocument();
+				svgContainer.addChild(svg);
 			}
 			
-			private var svg:SVGDocument;
 			protected function onLoadBtnClick(event:MouseEvent):void
 			{
 				var file:File = new File();
@@ -48,57 +44,48 @@
 					var origSVGString:String = fs.readUTFBytes(fs.bytesAvailable);
 					fs.close();
 					
-					ProcessExecutor.instance.initialize(stage);
-					svg = new SVGDocument();
-					svg.parse(origSVGString);
-					svg.addEventListener(SVGEvent.PARSE_COMPLETE,function(e:SVGEvent):void{
-						trace(e);
-					});
-					spContainer.addChild(svg);
+					origXML = SVGParser.coverToAllPath(origSVGString);
+					curSelectedNodeId = null;
+					curSelectedFloorId = null;
+					curEditingNodeXML = null;
 					
-					allPathXML = SVGParser.coverToAllPath(origSVGString);
-					var floorIdStrings:Array = [];
-					for each(var floorXML:XML in allPathXML.children())
-					{
-						var floorId:String = floorXML.@id.toString();
-						floorIdStrings.push(floorId);
-						floorPolygonIds[floorId] = [];
-						for each(var polygonXML:XML in floorXML.children())
-						{
-							floorPolygonIds[floorId].push(polygonXML.@nodeId.toString());
-						}
-					}
-					floors.source = floorIdStrings;
+					updateDisplay();
 				});
 			}
 			
+			private var isFloorIdChange:Boolean = false;
+			private var isNodeIdChange:Boolean = false;
+			
 			protected function onFloorDropDownListChange(event:IndexChangeEvent):void
 			{
-				curSelectedFloorId = floors.source[event.newIndex];
-				if(curSelectedFloorId != "")
-					floorPolygonIdsList.dataProvider = new ArrayCollection(floorPolygonIds[curSelectedFloorId]);
+				isFloorIdChange = true;
+				
+				curSelectedFloorId = floorIdsDropdownList.dataProvider.getItemAt(event.newIndex) as String;
+				curEditingNodeXML = origXML.children().(@id == curSelectedFloorId)[0];
+				curSelectedNodeId = null;
+				
+				updateDisplay();
 			}
 			
-			protected function onFloorPolygonIdsListChange(event:IndexChangeEvent):void
+			protected function onNodeIdsListChange(event:IndexChangeEvent):void
 			{
-				var polygonId:String = floorPolygonIds[curSelectedFloorId][event.newIndex];
-				if(curSelectedFloorId != "")
-				{
-					curEditingXMLNode = allPathXML.children().(@id == curSelectedFloorId).children().(@nodeId == polygonId)[0];
-					svg.parse(curEditingXMLNode);
-					updateAttributes();
-				}
+				isNodeIdChange = true;
+				
+				curSelectedNodeId = nodeIdsList.dataProvider.getItemAt(event.newIndex) as String;
+				curEditingNodeXML = origXML.children().(@id == curSelectedFloorId).children().(@nodeId == curSelectedNodeId)[0];
+				
+				updateDisplay();
 			}
 			
 			protected function onSaveBtnClick(event:MouseEvent):void
 			{
-				if(allPathXML)
+				if(origXML)
 				{
 					var fileR:FileReference = new FileReference();
 					var saveString:String = "<?xml version='1.0' encoding='utf-8'?>\n" +
 					"<!-- Generator: GimSVGEditor 1.0.1 -->\n" +
 					"<!DOCTYPE svg PUBLIC '-//W3C//DTD SVG 1.1//EN' 'http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd'>\n" +
-					allPathXML.toXMLString();
+					origXML.toXMLString();
 					fileR.save(saveString,"data.sgxml");
 				}
 				else
@@ -107,26 +94,96 @@
 				}
 			}
 			
-			private function updateAttributes():void
-			{
-				nodeId = curEditingXMLNode.@nodeId;
-				nodeTypeId = curEditingXMLNode.@nodeTypeId;
-				bindNodeIds = curEditingXMLNode.@bindNodeIds;
-				nodePosition = curEditingXMLNode.@nodePosition;
-				fill = curEditingXMLNode.@fill;
-				deep = curEditingXMLNode.@deep;
-				d = curEditingXMLNode.@d;
-			}
-			
 			protected function onInputChangee(event:TextOperationEvent):void
 			{
-				curEditingXMLNode.@nodeId = nodeId = nodeIdInput.text;
-				curEditingXMLNode.@nodeTypeId = nodeTypeId = nodeTypeIdInput.text;
-				curEditingXMLNode.@bindNodeIds = bindNodeIds = bindNodeIdsInput.text;
-				curEditingXMLNode.@nodePosition = nodePosition = nodePositionInput.text;
-				curEditingXMLNode.@fill = fill = fillInput.text;
-				curEditingXMLNode.@deep = deep = deepInput.text;
-				curEditingXMLNode.@d = d = dInput.text;
+				curEditingNodeXML.@nodeId = nodeIdInput.text;
+				curEditingNodeXML.@nodeTypeId = nodeTypeIdInput.text;
+				curEditingNodeXML.@bindNodeIds = bindNodeIdsInput.text;
+				curEditingNodeXML.@bindShopId = bindShopIdInput.text;
+				curEditingNodeXML.@nodePosition = nodePositionInput.text;
+				curEditingNodeXML.@fill = fillInput.text;
+				curEditingNodeXML.@deep = deepInput.text;
+				curEditingNodeXML.@d = dInput.text;
+				
+				updateDisplay();
+			}
+			
+			protected function onNodesContainerClick(event:MouseEvent):void
+			{
+				if(curSelectedFloorId)
+				{
+					var pathNodeXML:XML = SVGParser.generateNodeXML(event.localX,event.localY);
+					origXML.children().(@id == curSelectedFloorId)[0].appendChild(pathNodeXML);
+					curEditingNodeXML = origXML.children().(@id == curSelectedFloorId)[0];
+					isReload = true;
+					updateDisplay();
+				}
+			}
+			
+			private var isReload:Boolean = true;
+			private var floorIds:Array;
+			private var nodeIds:Array;
+			private var nodes:Array;
+			//根据XML数据显示当前选中的楼层,当前选中的区域,并添加NODES
+			private function updateDisplay():void
+			{
+				if(isReload)
+				{
+					isReload = false;
+					floorIds = [];
+					nodeIds = [];
+					nodes = [];
+					
+					for each(var floorXML:XML in origXML.children())
+					{
+						var floorId:String = floorXML.@id.toString();
+						floorIds.push(floorId);
+						for each(var pathXML:XML in floorXML.children())
+						{
+							var nodeId:String = pathXML.@nodeId.toString();
+							if(!nodeIds[floorId]) nodeIds[floorId] = [];
+							nodeIds[floorId].push(nodeId);
+							
+							if(!nodes[floorId]) nodes[floorId] = [];
+							var node:Node = new Node();
+							nodes[floorId].push(node);
+							node.x = pathXML.@nodePosition.split(',')[0];
+							node.y = pathXML.@nodePosition.split(',')[1];
+						}
+					}
+					floorIdsDropdownList.dataProvider = new ArrayCollection(floorIds);
+					curEditingNodeXML = null;
+				}
+				
+				if(isFloorIdChange)
+				{
+					isFloorIdChange = false;
+					nodeIdsList.dataProvider = new ArrayCollection(nodeIds[curSelectedFloorId]);
+				}
+				
+				if(isNodeIdChange)
+				{
+					isNodeIdChange = false;
+				}
+				
+				//inputs
+				if(curEditingNodeXML)
+				{
+					svg.parse(curEditingNodeXML);
+					if(curEditingNodeXML.hasSimpleContent())
+					{
+						nodeIdInput.text = curEditingNodeXML.@nodeId;
+						nodeTypeIdInput.text = curEditingNodeXML.@nodeTypeId;
+						bindNodeIdsInput.text = curEditingNodeXML.@bindNodeIds;
+						bindShopIdInput.text = curEditingNodeXML.@bindShopId;
+						nodePositionInput.text = curEditingNodeXML.@nodePosition;
+						fillInput.text = curEditingNodeXML.@fill;
+						deepInput.text = curEditingNodeXML.@deep;
+						dInput.text = curEditingNodeXML.@d;
+					}
+					
+				}
+				
 			}
 			
 		]]>
@@ -139,26 +196,28 @@
 			<s:VGroup left="2" right="2" top="2" bottom="2" gap="0">
 				<!--<s:Label text="载入与选择"/>-->
 				<s:Button width="100%" label="载入SVG" click="onLoadBtnClick(event)"/>
-				<s:DropDownList width="100%" dataProvider="{floors}" change="onFloorDropDownListChange(event)"/>
-				<s:List id="floorPolygonIdsList" width="100%" height="100%" change="onFloorPolygonIdsListChange(event)"/>
+				<s:DropDownList width="100%" id="floorIdsDropdownList" change="onFloorDropDownListChange(event)"/>
+				<s:List id="nodeIdsList" width="100%" height="100%" change="onNodeIdsListChange(event)"/>
 				<s:Button width="100%" label="保存SVG" click="onSaveBtnClick(event)"/>
 			</s:VGroup>
 		</s:BorderContainer>
 		<s:BorderContainer height="100%" width="360">
 			<s:VGroup left="2" right="2" top="2" bottom="2" gap="0">
 				<!--<s:Label text="字段设置"/>-->
-				<s:HGroup width="100%"><s:Label width="60" text="ID"/><s:TextInput id="nodeIdInput" change="onInputChangee(event)" width="100%" text="{nodeId}" editable="false"/></s:HGroup>
-				<s:HGroup width="100%"><s:Label width="60" text="类型"/><s:TextInput id="nodeTypeIdInput" change="onInputChangee(event)" width="100%" text="{nodeTypeId}"/></s:HGroup>
-				<s:HGroup width="100%"><s:Label width="60" text="绑定"/><s:TextInput id="bindNodeIdsInput" change="onInputChangee(event)" width="100%" text="{bindNodeIds}"/></s:HGroup>
-				<s:HGroup width="100%"><s:Label width="60" text="位置"/><s:TextInput id="nodePositionInput" change="onInputChangee(event)" width="100%" text="{nodePosition}"/></s:HGroup>
-				<s:HGroup width="100%"><s:Label width="60" text="填充"/><s:TextInput id="fillInput" change="onInputChangee(event)" width="100%" text="{fill}"/></s:HGroup>
-				<s:HGroup width="100%"><s:Label width="60" text="深度"/><s:TextInput id="deepInput" change="onInputChangee(event)" width="100%" text="{deep}"/></s:HGroup>
-				<s:HGroup width="100%"><s:Label width="60" text="数据"/><s:TextInput id="dInput" change="onInputChangee(event)" width="100%" text="{d}"/></s:HGroup>
+				<s:HGroup width="100%"><s:Label width="60" text="ID"/><s:TextInput id="nodeIdInput" change="onInputChangee(event)" width="100%" editable="false"/></s:HGroup>
+				<s:HGroup width="100%"><s:Label width="60" text="类型"/><s:TextInput id="nodeTypeIdInput" change="onInputChangee(event)" width="100%"/></s:HGroup>
+				<s:HGroup width="100%"><s:Label width="60" text="绑定"/><s:TextInput id="bindNodeIdsInput" change="onInputChangee(event)" width="100%"/></s:HGroup>
+				<s:HGroup width="100%"><s:Label width="60" text="店铺"/><s:TextInput id="bindShopIdInput" change="onInputChangee(event)" width="100%"/></s:HGroup>
+				<s:HGroup width="100%"><s:Label width="60" text="位置"/><s:TextInput id="nodePositionInput" change="onInputChangee(event)" width="100%"/></s:HGroup>
+				<s:HGroup width="100%"><s:Label width="60" text="填充"/><s:TextInput id="fillInput" change="onInputChangee(event)" width="100%"/></s:HGroup>
+				<s:HGroup width="100%"><s:Label width="60" text="深度"/><s:TextInput id="deepInput" change="onInputChangee(event)" width="100%"/></s:HGroup>
+				<s:HGroup width="100%"><s:Label width="60" text="数据"/><s:TextInput id="dInput" change="onInputChangee(event)" width="100%"/></s:HGroup>
 			</s:VGroup>
 		</s:BorderContainer>
 		<s:BorderContainer width="100%" height="100%">
 			<s:Group id="canvas" width="100%" height="100%" clipAndEnableScrolling="true">
-				<mx:UIComponent id="spContainer" width="100%" height="100%"/>
+				<mx:UIComponent id="svgContainer" width="100%" height="100%"/>
+				<mx:UIComponent id="nodesContainer" width="100%" height="100%" click="onNodesContainerClick(event)"/>
 			</s:Group>
 		</s:BorderContainer>
 	</s:HGroup>
