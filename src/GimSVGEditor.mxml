@@ -15,6 +15,7 @@
 			
 			import spark.events.IndexChangeEvent;
 			import spark.events.TextOperationEvent;
+			import spark.primitives.Path;
 			
 			private var svg:SVGDocument;
 			
@@ -45,77 +46,39 @@
 					fs.close();
 					
 					origXML = SVGParser.coverToAllPath(origSVGString);
-					curSelectedNodeId = null;
-					curSelectedFloorId = null;
-					curEditingNodeXML = null;
 					
 					updateDisplay();
 				});
 			}
 			
-			private var isFloorIdChange:Boolean = false;
-			private var isNodeIdChange:Boolean = false;
-			
-			protected function onFloorDropDownListChange(event:IndexChangeEvent):void
-			{
-				isFloorIdChange = true;
-				
-				curSelectedFloorId = floorIdsDropdownList.dataProvider.getItemAt(event.newIndex) as String;
-				curEditingNodeXML = origXML.children().(@id == curSelectedFloorId)[0];
-				curSelectedNodeId = null;
-				
-				updateDisplay();
-			}
-			
-			protected function onNodeIdsListChange(event:IndexChangeEvent):void
-			{
-				isNodeIdChange = true;
-				
-				curSelectedNodeId = nodeIdsList.dataProvider.getItemAt(event.newIndex) as String;
-				curEditingNodeXML = origXML.children().(@id == curSelectedFloorId).children().(@nodeId == curSelectedNodeId)[0];
-				
-				updateDisplay();
-			}
-			
-			protected function onSaveBtnClick(event:MouseEvent):void
-			{
-				if(origXML)
-				{
-					var fileR:FileReference = new FileReference();
-					var saveString:String = "<?xml version='1.0' encoding='utf-8'?>\n" +
-					"<!-- Generator: GimSVGEditor 1.0.1 -->\n" +
-					"<!DOCTYPE svg PUBLIC '-//W3C//DTD SVG 1.1//EN' 'http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd'>\n" +
-					origXML.toXMLString();
-					fileR.save(saveString,"data.sgxml");
-				}
-				else
-				{
-					Alert.show("你需要先加载一个SVG文件");
-				}
-			}
-			
 			protected function onInputChangee(event:TextOperationEvent):void
 			{
-				curEditingNodeXML.@nodeId = nodeIdInput.text;
-				curEditingNodeXML.@nodeTypeId = nodeTypeIdInput.text;
-				curEditingNodeXML.@bindNodeIds = bindNodeIdsInput.text;
-				curEditingNodeXML.@bindShopId = bindShopIdInput.text;
-				curEditingNodeXML.@nodePosition = nodePositionInput.text;
-				curEditingNodeXML.@fill = fillInput.text;
-				curEditingNodeXML.@deep = deepInput.text;
-				curEditingNodeXML.@d = dInput.text;
+				if(curEditingNodeXML)
+				{
+					curEditingNodeXML.@nodeId = nodeIdInput.text;
+					curEditingNodeXML.@nodeTypeId = nodeTypeIdInput.text;
+					curEditingNodeXML.@bindNodeIds = bindNodeIdsInput.text;
+					curEditingNodeXML.@bindShopId = bindShopIdInput.text;
+					curEditingNodeXML.@nodePosition = nodePositionInput.text;
+					curEditingNodeXML.@fill = fillInput.text;
+					curEditingNodeXML.@deep = deepInput.text;
+					curEditingNodeXML.@d = dInput.text;
+				}
 				
 				updateDisplay();
 			}
 			
 			protected function onNodesContainerClick(event:MouseEvent):void
 			{
-				if(curSelectedFloorId)
+				if(curSelectedFloorId && !curSelectedNodeId)
 				{
 					var pathNodeXML:XML = SVGParser.generateNodeXML(event.localX,event.localY);
 					origXML.children().(@id == curSelectedFloorId)[0].appendChild(pathNodeXML);
-					curEditingNodeXML = origXML.children().(@id == curSelectedFloorId)[0];
+					
 					isReload = true;
+					var t:String = curSelectedFloorId;
+					updateDisplay();
+					floorIdsDropdownList.selectedItem = t;
 					updateDisplay();
 				}
 			}
@@ -123,15 +86,31 @@
 			private var isReload:Boolean = true;
 			private var floorIds:Array;
 			private var nodeIds:Array;
+			private var nodesByFloorId:Array;
 			private var nodes:Array;
 			//根据XML数据显示当前选中的楼层,当前选中的区域,并添加NODES
-			private function updateDisplay():void
+			private function updateDisplay(event:Event = null):void
 			{
+				//clear all
+				if(nodesContainer.numChildren > 0) nodesContainer.removeChildren(0,nodesContainer.numChildren - 1);
+				
+				svg.parse("<svg />");
+				nodeIdInput.text = "";
+				nodeTypeIdInput.text = "";
+				bindNodeIdsInput.text = "";
+				bindShopIdInput.text = "";
+				nodePositionInput.text = "";
+				fillInput.text = "";
+				deepInput.text = "";
+				dInput.text = "";
+				
+				//reload
 				if(isReload)
 				{
 					isReload = false;
 					floorIds = [];
 					nodeIds = [];
+					nodesByFloorId = [];
 					nodes = [];
 					
 					for each(var floorXML:XML in origXML.children())
@@ -144,34 +123,71 @@
 							if(!nodeIds[floorId]) nodeIds[floorId] = [];
 							nodeIds[floorId].push(nodeId);
 							
-							if(!nodes[floorId]) nodes[floorId] = [];
-							var node:Node = new Node();
-							nodes[floorId].push(node);
-							node.x = pathXML.@nodePosition.split(',')[0];
-							node.y = pathXML.@nodePosition.split(',')[1];
+							if(!nodesByFloorId[floorId]) nodesByFloorId[floorId] = [];
+							var node:Node = new Node(pathXML);
+							nodesByFloorId[floorId][pathXML.@nodeId] = node;
+							nodes[pathXML.@nodeId] = node;
+							node.addEventListener(MouseEvent.CLICK,onNodeClick);
 						}
 					}
+					
+					for each(var startPathNode:Node in nodes)
+					{
+						var nodeIdsString:String = startPathNode.sourceXML.@bindNodeIds;
+						var pathNodeIds:Array = nodeIdsString.split(",");
+						for each(var pathNodeId:String in pathNodeIds)
+						{
+							var endPathNode:Node = nodes[pathNodeId];
+							if(endPathNode)
+							{
+								var path:NodePath = new NodePath(startPathNode,endPathNode);
+								startPathNode.addPath(path);
+								endPathNode.addPath(path);
+							}
+						}
+					}
+					
 					floorIdsDropdownList.dataProvider = new ArrayCollection(floorIds);
+					nodeIdsList.dataProvider = null;
 					curEditingNodeXML = null;
 				}
 				
-				if(isFloorIdChange)
+				if(curSelectedFloorId != floorIdsDropdownList.selectedItem)
 				{
-					isFloorIdChange = false;
-					nodeIdsList.dataProvider = new ArrayCollection(nodeIds[curSelectedFloorId]);
+					curSelectedFloorId = floorIdsDropdownList.selectedItem;
+					curSelectedNodeId = null;
+					if(curSelectedFloorId)
+					{
+						nodeIdsList.dataProvider = new ArrayCollection(nodeIds[curSelectedFloorId]);
+						curEditingNodeXML = origXML.children().(@id == curSelectedFloorId)[0];
+						
+						for each(var subNode:Node in nodesByFloorId[curSelectedFloorId])
+						{
+							nodesContainer.addChild(subNode);
+							for each(var subPath:NodePath in subNode.pathes)
+							{
+								if(!subPath.parent) nodesContainer.addChildAt(subPath,0);
+							}
+						}
+					}
+				}
+				else if(curSelectedFloorId && curSelectedNodeId != nodeIdsList.selectedItem)
+				{
+					curSelectedNodeId = nodeIdsList.selectedItem;
+					if(curSelectedNodeId)
+					{
+						curEditingNodeXML = origXML.children().(@id == curSelectedFloorId).children().(@nodeId == curSelectedNodeId)[0];
+					}
 				}
 				
-				if(isNodeIdChange)
-				{
-					isNodeIdChange = false;
-				}
-				
-				//inputs
-				if(curEditingNodeXML)
+				if(curEditingNodeXML) 
 				{
 					svg.parse(curEditingNodeXML);
-					if(curEditingNodeXML.hasSimpleContent())
+					if(!curEditingNodeXML.hasComplexContent())
 					{
+						var curNode:Node = nodesByFloorId[curSelectedFloorId][curEditingNodeXML.@nodeId];
+						nodesContainer.addChild(curNode);
+						
 						nodeIdInput.text = curEditingNodeXML.@nodeId;
 						nodeTypeIdInput.text = curEditingNodeXML.@nodeTypeId;
 						bindNodeIdsInput.text = curEditingNodeXML.@bindNodeIds;
@@ -181,9 +197,59 @@
 						deepInput.text = curEditingNodeXML.@deep;
 						dInput.text = curEditingNodeXML.@d;
 					}
-					
 				}
+			}
+			
+			protected function onSaveBtnClick(event:MouseEvent):void
+			{
+				if(origXML)
+				{
+					var fileR:FileReference = new FileReference();
+					var saveString:String = "<?xml version='1.0' encoding='utf-8'?>\n" +
+						"<!-- Generator: GimSVGEditor 1.0.1 -->\n" +
+						"<!DOCTYPE svg PUBLIC '-//W3C//DTD SVG 1.1//EN' 'http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd'>\n" +
+						origXML.toXMLString();
+					fileR.save(saveString,"data.sgxml");
+				}
+				else
+				{
+					Alert.show("你需要先加载一个SVG文件");
+				}
+			}
+			
+			private var newPathStartNodeId:String = null;
+			protected function onNodeClick(event:MouseEvent):void
+			{
+				event.stopPropagation();
+				var node:Node = event.currentTarget as Node;
+				if(!newPathStartNodeId) 
+				{
+					newPathStartNodeId = node.sourceXML.@nodeId;
+				}
+				else 
+				{
+					addPath(newPathStartNodeId,node.sourceXML.@nodeId);
+					newPathStartNodeId = null;
+				}
+			}
+			
+			private function addPath(startNodeId:String,endNodeId:String):void
+			{
+				var str:String;
 				
+				str = origXML.children().(@id == curSelectedFloorId).children().(@nodeId == startNodeId)[0].@bindNodeIds + "," + endNodeId;
+				if(str.charAt(0) == ",") str = str.substr(1,str.length - 1);
+				origXML.children().(@id == curSelectedFloorId).children().(@nodeId == startNodeId)[0].@bindNodeIds = str;
+				
+				str = origXML.children().(@id == curSelectedFloorId).children().(@nodeId == endNodeId)[0].@bindNodeIds + "," + startNodeId;
+				if(str.charAt(0) == ",") str = str.substr(1,str.length - 1);
+				origXML.children().(@id == curSelectedFloorId).children().(@nodeId == endNodeId)[0].@bindNodeIds = str;
+				
+				isReload = true;
+				var t:String = curSelectedFloorId;
+				updateDisplay();
+				floorIdsDropdownList.selectedItem = t;
+				updateDisplay();
 			}
 			
 		]]>
@@ -196,8 +262,8 @@
 			<s:VGroup left="2" right="2" top="2" bottom="2" gap="0">
 				<!--<s:Label text="载入与选择"/>-->
 				<s:Button width="100%" label="载入SVG" click="onLoadBtnClick(event)"/>
-				<s:DropDownList width="100%" id="floorIdsDropdownList" change="onFloorDropDownListChange(event)"/>
-				<s:List id="nodeIdsList" width="100%" height="100%" change="onNodeIdsListChange(event)"/>
+				<s:DropDownList width="100%" id="floorIdsDropdownList" change="updateDisplay(event)"/>
+				<s:List id="nodeIdsList" width="100%" height="100%" change="updateDisplay(event)"/>
 				<s:Button width="100%" label="保存SVG" click="onSaveBtnClick(event)"/>
 			</s:VGroup>
 		</s:BorderContainer>
