@@ -15,7 +15,6 @@
 			
 			import spark.events.IndexChangeEvent;
 			import spark.events.TextOperationEvent;
-			import spark.primitives.Path;
 			
 			private var svg:SVGDocument;
 			
