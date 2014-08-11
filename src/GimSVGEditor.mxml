@@ -10,13 +10,16 @@
 			import com.lorentz.SVG.display.SVGDocument;
 			import com.lorentz.processing.ProcessExecutor;
 			
+			import flash.filters.DropShadowFilter;
+			
 			import mx.collections.ArrayCollection;
 			import mx.controls.Alert;
 			
 			import spark.events.IndexChangeEvent;
 			import spark.events.TextOperationEvent;
 			
-			private var svg:SVGDocument;
+			private var mainSVG:SVGDocument;
+			private var focusSVG:SVGDocument;
 			
 			private var origXML:XML;
 			private var curSelectedFloorId:String;
@@ -30,8 +33,10 @@
 				nodesContainer.graphics.endFill();
 				
 				ProcessExecutor.instance.initialize(stage);
-				svg = new SVGDocument();
-				svgContainer.addChild(svg);
+				mainSVG = new SVGDocument();
+				svgContainer.addChild(mainSVG);
+				focusSVG = new SVGDocument();
+				svgContainer.addChild(focusSVG);
 			}
 			
 			protected function onLoadBtnClick(event:MouseEvent):void
@@ -78,6 +83,7 @@
 					var t:String = curSelectedFloorId;
 					updateDisplay();
 					floorIdsDropdownList.selectedItem = t;
+					
 					updateDisplay();
 				}
 			}
@@ -93,7 +99,10 @@
 				//clear all
 				if(nodesContainer.numChildren > 0) nodesContainer.removeChildren(0,nodesContainer.numChildren - 1);
 				
-				svg.parse("<svg />");
+				mainSVG.parse("<svg />");
+				focusSVG.parse("<svg />");
+				focusSVG.filters = [new DropShadowFilter(0,0,0xFF0000,0.8,8,8,2)];
+				
 				nodeIdInput.text = "";
 				nodeTypeIdInput.text = "";
 				bindNodeIdsInput.text = "";
@@ -179,9 +188,11 @@
 					}
 				}
 				
+				if(curSelectedFloorId) mainSVG.parse(origXML.children().(@id == curSelectedFloorId)[0]);
+				
 				if(curEditingNodeXML) 
 				{
-					svg.parse(curEditingNodeXML);
+					focusSVG.parse(curEditingNodeXML);
 					if(!curEditingNodeXML.hasComplexContent())
 					{
 						var curNode:Node = nodesByFloorId[curSelectedFloorId][curEditingNodeXML.@nodeId];
