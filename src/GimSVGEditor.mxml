@@ -50,6 +50,7 @@
 					fs.close();
 					
 					origXML = SVGParser.coverToAllPath(origSVGString);
+					var x:XML = origXML;
 					
 					updateDisplay();
 				});

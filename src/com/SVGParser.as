@@ -19,7 +19,6 @@ package com
 		public static function coverToAllPath(SVGString:String):XML
 		{
 			svgXML = getClearedXML(SVGString);
-			var xml:XML = convertToPathXML(svgXML);
 			return convertToPathXML(svgXML);
 		}
 		
@@ -65,10 +64,21 @@ package com
 				default:
 					break;
 			}
+			
+			var bindShopId:String = "";
+			if(xml.@id.toString() != "")
+			{
+				bindShopId = bindShopId.split("_x3")[1];
+			}
+			else if(xml.@bindShopId.toString() != "")
+			{
+				bindShopId = xml.@bindShopId.toString();
+			}
+			
 			simpleXML.@nodeId = xml.@nodeId.toString() != "" ? xml.@nodeId : generateNodeId();
 			simpleXML.@nodeTypeId = xml.@nodeTypeId.toString() != "" ? xml.@nodeTypeId : DEFAULT_NODE_TYPE_ID;
 			simpleXML.@bindNodeIds = xml.@bindNodeIds.toString() != "" ? xml.@bindNodeIds : "";
-			simpleXML.@bindShopId = xml.@bindShopId.toString() != "" ? xml.@bindShopId : "";
+			simpleXML.@bindShopId = bindShopId;
 			simpleXML.@fill = xml.@fill.toString() != "" ? xml.@fill : DEFAULT_FILL;
 			simpleXML.@deep = xml.@deep.toString() != "" ? xml.@deep : DEFAULT_DEEP;
 			simpleXML.@d = xml.@d.toString() != "" ? xml.@d : DEFAULT_D;
