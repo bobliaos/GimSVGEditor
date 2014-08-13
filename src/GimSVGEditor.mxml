@@ -134,6 +134,9 @@
 							
 							if(!nodesByFloorId[floorId]) nodesByFloorId[floorId] = [];
 							var node:Node = new Node(pathXML);
+							node.addEventListener(MouseEvent.CLICK,function(e:MouseEvent):void{
+								trace(" Click Node ",node.sourceXML.@nodeId);
+							});
 							nodesByFloorId[floorId][pathXML.@nodeId] = node;
 							nodes[pathXML.@nodeId] = node;
 							node.addEventListener(MouseEvent.CLICK,onNodeClick);

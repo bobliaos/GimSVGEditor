@@ -66,9 +66,11 @@ package com
 			}
 			
 			var bindShopId:String = "";
-			if(xml.@id.toString() != "")
+			if(xml.@bindShopId.toString() == "" && xml.@id.toString() != "")
 			{
-				bindShopId = bindShopId.split("_x3")[1];
+				bindShopId = xml.@id.split("_x")[1];
+				bindShopId = bindShopId.replace("_","");
+				bindShopId = bindShopId.substring(1,bindShopId.length);
 			}
 			else if(xml.@bindShopId.toString() != "")
 			{
